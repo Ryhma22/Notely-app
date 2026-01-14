@@ -45,33 +45,73 @@ Notely-app/
 ├── app.json
 ├── package.json
 └── README.md
+```
 
 ---
 
 ## Git-perus työnkulku
 
 ### Hae uusin `main`
+🚀 Käynnistys
+1. Asenna riippuvuudet
+Bash
+
+npm install
+2. Käynnistä kehityspalvelin
+Bash
+
+npx expo start
+Skannaa terminaaliin ilmestyvä QR-koodi puhelimellasi tai paina w (web), a (Android) tai i (iOS).
+
+🛠 Git-työnkulku
+Noudata tätä prosessia uusien ominaisuuksien kehittämisessä.
+
+1) Hae uusin main
+Varmista aina ennen aloitusta, että sinulla on uusin versio projektista.
+
 ```bash
+
 git checkout main
 git pull
-Tee oma branch kortille
-Nimeä branch kortin mukaan (ei tarvitse issue-linkitystä):
+```
+2) Luo uusi branch
+Tee kortille/tehtävälle oma haara (branch). Nimeämiskäytäntö: feature/<kuvaus> tai fix/<kuvaus>. Issue-linkitystä ei tarvita nimeen.
 
-bash
-Kopioi koodi
-git checkout -b feature/<kuvaus>
-Esim:
-
-bash
-Kopioi koodi
+# Esimerkki:
+```bash
 git checkout -b feature/notes-list
-Tee muutokset ja committaa
-bash
-Kopioi koodi
+3) Tee muutokset ja committaa
+Kun olet valmis, tarkista muutokset ja tee commit.
+```
+
+```bash
+
 git status
 git add .
 git commit -m "feat: notes list UI"
-Pushaa branch GitHubiin
-bash
-Kopioi koodi
+```
+
+4) Pushaa GitHubiin
+Ensimmäisellä kerralla uusi branch pitää asettaa upstreamiin (-u).
+
+```bash
 git push -u origin feature/notes-list
+📝 Pikakomennot (Quick Cheatsheet)
+```
+
+
+# Projektin alustus
+```bash
+git clone <REPO_URL>
+cd Notely-app
+npm install
+
+# Käynnistys
+npx expo start
+
+# Uusi ominaisuus
+git checkout main && git pull
+git checkout -b feature/uusi-ominaisuus
+git add . && git commit -m "feat: kuvaus muutoksesta"
+git push -u origin feature/uusi-ominaisuus
+```
