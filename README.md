@@ -1,18 +1,21 @@
 # Notely-app  
-A React Native note-taking application developed as a school project using Scrum methodology.
+React Native -pohjainen muistiinpanosovellus, joka on kehitetty kouluprojektina Scrum-menetelmää käyttäen.
 
----
+##Definition of Done
 
-## Definition of Done
+Tehtävä katsotaan valmiiksi (Done), kun:
 
-A task is considered **Done** when:
-- Code is implemented and committed to GitHub  
-- Feature works without runtime errors  
-- Feature is tested on emulator or device  
-- Acceptance criteria are fulfilled  
-- Documentation is updated if needed  
-- Reported Hours field is filled in GitHub Projects (Excel)
+Koodi on toteutettu ja commitoitu GitHubiin
 
+Ominaisuus toimii ilman ajonaikaisia virheitä
+
+Ominaisuus on testattu emulaattorissa tai oikealla laitteella
+
+Hyväksymiskriteerit on täytetty
+
+Dokumentaatio on päivitetty tarvittaessa
+
+Reported Hours -kenttä on täytetty (Excel)
 ---
 
 ## Kansiorakenne
@@ -26,8 +29,6 @@ Projekti käyttää **Expo Routerin file-based routing** -järjestelmää. Reiti
 
 `_layout.tsx`-tiedostot määrittävät navigaatiotyypin (Stack tai Tabs).  
 Uudet näytöt lisätään luomalla uusi `.tsx`-tiedosto `app/`-kansioon.
-
-Git-perus työnkulku
 
 ```text
 Notely-app/
@@ -49,28 +50,28 @@ Notely-app/
 
 ---
 
-## Git-perus työnkulku
 
-### Hae uusin `main`
-🚀 Käynnistys
-1. Asenna riippuvuudet
-Bash
 
+## 🚀 Käynnistys
+1) Asenna riippuvuudet
+```bash
 npm install
+```
 2. Käynnistä kehityspalvelin
-Bash
-
+```bash
 npx expo start
+```
 Skannaa terminaaliin ilmestyvä QR-koodi puhelimellasi tai paina w (web), a (Android) tai i (iOS).
 
-🛠 Git-työnkulku
+
+## 🛠 Git-työnkulku
+
 Noudata tätä prosessia uusien ominaisuuksien kehittämisessä.
 
 1) Hae uusin main
 Varmista aina ennen aloitusta, että sinulla on uusin versio projektista.
 
 ```bash
-
 git checkout main
 git pull
 ```
@@ -80,12 +81,9 @@ Tee kortille/tehtävälle oma haara (branch). Nimeämiskäytäntö: feature/<kuv
 # Esimerkki:
 ```bash
 git checkout -b feature/notes-list
-3) Tee muutokset ja committaa
-Kun olet valmis, tarkista muutokset ja tee commit.
 ```
-
+3) Tee muutokset ja committaa
 ```bash
-
 git status
 git add .
 git commit -m "feat: notes list UI"
@@ -96,10 +94,8 @@ Ensimmäisellä kerralla uusi branch pitää asettaa upstreamiin (-u).
 
 ```bash
 git push -u origin feature/notes-list
-📝 Pikakomennot (Quick Cheatsheet)
 ```
-
-
+📝 Pikakomennot (Quick Cheatsheet)
 # Projektin alustus
 ```bash
 git clone <REPO_URL>
