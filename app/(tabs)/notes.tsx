@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Modal,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
+
+import { useSettings } from "@/hooks/use-settings";
+import { useI18n } from "@/hooks/use-i18n";
+import { Colors } from "@/constants/Colors";
+import TextApp from "@/components/TextApp";
 
 import MathBlock from "../../components/blocks/MathBlock";
 import DiagramEditorBlock from "../../components/blocks/DiagramEditorBlock";
@@ -27,36 +30,34 @@ import {
 import type { Note, NoteBlock, BlockType } from "@/lib/database.types";
 
 export default function NotesScreen() {
+  const { isDark } = useSettings();
+  const { t } = useI18n();
+  const colors = isDark ? Colors.dark : Colors.light;
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [blocks, setBlocks] = useState<NoteBlock[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const activeNote = notes.find((n) => n.id === activeNoteId);
 
-  // Lataa muistiinpanot kun näkymä avataan
   useFocusEffect(
     useCallback(() => {
       loadNotes();
     }, [])
   );
 
-  // Lataa lohkot kun muistiinpano valitaan
   useEffect(() => {
-    if (activeNoteId) {
-      loadBlocks(activeNoteId);
-    } else {
-      setBlocks([]);
-    }
+    if (activeNoteId) loadBlocks(activeNoteId);
+    else setBlocks([]);
   }, [activeNoteId]);
 
   const loadNotes = async () => {
     setLoading(true);
     const { data, error } = await getNotes();
     if (error) {
-      Alert.alert("Virhe", "Muistiinpanojen lataus epäonnistui");
+      Alert.alert(t("error"), t("notesLoadFailed"));
     } else {
       setNotes(data || []);
     }
@@ -70,132 +71,105 @@ export default function NotesScreen() {
 
   const handleAddNote = async () => {
     setSaving(true);
-    const { data, error } = await createNote({
-      title: `Note ${notes.length + 1}`,
+    const { data } = await createNote({
+      title: `${t("note")} ${notes.length + 1}`,
     });
-    if (error) {
-      Alert.alert("Virhe", "Muistiinpanon luonti epäonnistui");
-    } else if (data) {
-      setNotes([data, ...notes]);
-    }
+    if (data) setNotes([data, ...notes]);
     setSaving(false);
   };
 
   const handleRemoveNote = async (id: string) => {
-    Alert.alert("Poista muistiinpano", "Haluatko varmasti poistaa tämän?", [
-      { text: "Peruuta", style: "cancel" },
+    Alert.alert(t("deleteNote"), t("areYouSure"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Poista",
+        text: t("delete"),
         style: "destructive",
         onPress: async () => {
-          const { error } = await deleteNote(id);
-          if (error) {
-            Alert.alert("Virhe", "Poisto epäonnistui");
-          } else {
-            setNotes(notes.filter((n) => n.id !== id));
-            if (activeNoteId === id) setActiveNoteId(null);
-          }
+          await deleteNote(id);
+          setNotes(notes.filter((n) => n.id !== id));
+          if (activeNoteId === id) setActiveNoteId(null);
         },
       },
     ]);
   };
 
-  const handleUpdateNote = async (id: string, updates: { title?: string; content?: string }) => {
-    // Päivitä lokaalisti heti
+  const handleUpdateNote = async (
+    id: string,
+    updates: { title?: string; content?: string }
+  ) => {
     setNotes(notes.map((n) => (n.id === id ? { ...n, ...updates } : n)));
-    
-    // Tallenna tietokantaan (debounce olisi hyvä lisätä tuotantoon)
-    const { error } = await updateNote(id, updates);
-    if (error) {
-      console.error("Tallennus epäonnistui:", error);
-    }
+    await updateNote(id, updates);
   };
-
+  const handleDeleteBlock = async (blockId: string) => {
+    await deleteNoteBlock(blockId);
+    setBlocks(blocks.filter((b) => b.id !== blockId));
+  };
+  
   const handleAddBlock = async (type: BlockType) => {
     if (!activeNote) return;
-    setMenuOpen(false);
 
-    const newPosition = blocks.length;
-    const { data, error } = await createNoteBlock({
+    const { data } = await createNoteBlock({
       note_id: activeNote.id,
       type,
-      position: newPosition,
+      position: blocks.length,
       data: {},
     });
 
-    if (error) {
-      Alert.alert("Virhe", "Lohkon lisäys epäonnistui");
-    } else if (data) {
-      setBlocks([...blocks, data]);
-    }
+    if (data) setBlocks([...blocks, data]);
   };
 
-  const handleDeleteBlock = async (blockId: string) => {
-    const { error } = await deleteNoteBlock(blockId);
-    if (error) {
-      Alert.alert("Virhe", "Lohkon poisto epäonnistui");
-    } else {
-      setBlocks(blocks.filter((b) => b.id !== blockId));
-    }
-  };
-
-  // Loading state
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF" }}>
-        <ActivityIndicator size="large" color="#1976D2" />
-        <Text style={{ marginTop: 12, color: "#666" }}>Ladataan muistiinpanoja...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.tint} />
+        <TextApp style={{ marginTop: 12 }}>
+          {t("loadingNotes")}
+        </TextApp>
       </View>
     );
   }
 
-  // Notes list view
   if (!activeNote) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: "#FFF" }}>
-        <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 12 }}>
-          Notes
-        </Text>
+      <View style={{ flex: 1, padding: 16, backgroundColor: colors.background }}>
+        <TextApp style={{ fontSize: 22, fontWeight: "600", marginBottom: 12 }}>
+          {t("notes")}
+        </TextApp>
 
-        {notes.length === 0 ? (
-          <Text style={{ color: "#666", textAlign: "center", marginTop: 40 }}>
-            Ei muistiinpanoja vielä. Luo ensimmäinen!
-          </Text>
-        ) : (
-          notes.map((note) => (
+        {notes.map((note) => (
+          <View
+            key={note.id}
+            style={{
+              borderWidth: 1,
+              borderColor: colors.icon,
+              padding: 16,
+              marginBottom: 10,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <TouchableOpacity
-              key={note.id}
               onPress={() => setActiveNoteId(note.id)}
-              style={{
-                borderWidth: 1,
-                borderColor: "#DDD",
-                paddingVertical: 18,
-                paddingHorizontal: 16,
-                marginBottom: 10,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                backgroundColor: "#FAFAFA",
-              }}
+              style={{ flex: 1 }}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: "500" }}>{note.title}</Text>
-                {note.content ? (
-                  <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }} numberOfLines={1}>
-                    {note.content}
-                  </Text>
-                ) : null}
-              </View>
-
-              <TouchableOpacity
-                onPress={() => handleRemoveNote(note.id)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={{ fontSize: 20, color: "#D32F2F" }}>✕</Text>
-              </TouchableOpacity>
+              <TextApp>{note.title}</TextApp>
             </TouchableOpacity>
-          ))
-        )}
+
+            <TouchableOpacity onPress={() => handleRemoveNote(note.id)}>
+              <TextApp style={{ color: "#D32F2F", fontSize: 18 }}>
+                ✕
+              </TextApp>
+            </TouchableOpacity>
+          </View>
+        ))}
 
         <TouchableOpacity
           onPress={handleAddNote}
@@ -203,143 +177,75 @@ export default function NotesScreen() {
           style={{
             marginTop: 20,
             paddingVertical: 18,
-            backgroundColor: saving ? "#90CAF9" : "#1976D2",
+            backgroundColor: colors.tint,
             alignItems: "center",
             borderRadius: 6,
           }}
         >
           {saving ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.background} />
           ) : (
-            <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
-              + Add note
-            </Text>
+            <TextApp style={{ color: colors.background, fontWeight: "600" }}>
+              + {t("addNote")}
+            </TextApp>
           )}
         </TouchableOpacity>
       </View>
     );
   }
 
-  // Note editor view
   return (
-    <ScrollView style={{ flex: 1, padding: 16, backgroundColor: "#FFF" }}>
-      <View
+    <ScrollView style={{ flex: 1, padding: 16, backgroundColor: colors.background }}>
+      <TouchableOpacity onPress={() => setActiveNoteId(null)} style={{ padding: 10 }}>
+        <TextApp style={{ color: colors.tint }}>
+          ← {t("back")}
+        </TextApp>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => handleRemoveNote(activeNote.id)} style={{ padding: 10 }}>
+        <TextApp style={{ color: "#D32F2F" }}>
+          {t("deleteNote")}
+        </TextApp>
+      </TouchableOpacity>
+
+      <TextInput
+        value={activeNote.title}
+        onChangeText={(text) => handleUpdateNote(activeNote.id, { title: text })}
         style={{
-          flexDirection: "row",
-          alignItems: "center",
+          fontSize: 20,
+          fontWeight: "600",
+          color: colors.text,
           marginBottom: 12,
         }}
-      >
-        <TouchableOpacity
-          onPress={() => setActiveNoteId(null)}
-          style={{ padding: 10 }}
-        >
-          <Text style={{ color: "#1976D2", fontSize: 16 }}>← Back</Text>
-        </TouchableOpacity>
-
-        <TextInput
-          value={activeNote.title}
-          onChangeText={(text) => handleUpdateNote(activeNote.id, { title: text })}
-          style={{
-            flex: 1,
-            fontSize: 20,
-            fontWeight: "600",
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            textAlign: "center",
-          }}
-        />
-
-        <TouchableOpacity
-          onPress={() => setMenuOpen(true)}
-          style={{ padding: 10 }}
-        >
-          <Text style={{ fontSize: 22 }}>☰</Text>
-        </TouchableOpacity>
-      </View>
+      />
 
       <TextInput
         value={activeNote.content}
         onChangeText={(text) => handleUpdateNote(activeNote.id, { content: text })}
-        placeholder="Write your note..."
+        placeholder={t("writeNote")}
+        placeholderTextColor={colors.icon}
         multiline
         style={{
           borderWidth: 1,
-          borderColor: "#DDD",
+          borderColor: colors.icon,
           padding: 14,
           minHeight: 140,
           marginBottom: 16,
           fontSize: 16,
-          textAlignVertical: "top",
+          color: colors.text,
         }}
       />
 
       {blocks.map((block) => {
         const onDelete = () => handleDeleteBlock(block.id);
-
-        if (block.type === "diagram") {
+        if (block.type === "diagram")
           return <DiagramEditorBlock key={block.id} onDelete={onDelete} />;
-        }
-
-        if (block.type === "bar") {
+        if (block.type === "bar")
           return <BarChartEditorBlock key={block.id} onDelete={onDelete} />;
-        }
-
-        if (block.type === "math") {
+        if (block.type === "math")
           return <MathBlock key={block.id} onDelete={onDelete} />;
-        }
-
         return null;
       })}
-
-      <Modal
-        transparent
-        animationType="fade"
-        visible={menuOpen}
-        onRequestClose={() => setMenuOpen(false)}
-      >
-        <TouchableOpacity
-          onPress={() => setMenuOpen(false)}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.3)",
-            justifyContent: "flex-start",
-            alignItems: "flex-end",
-            paddingTop: 60,
-            paddingRight: 16,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#FFF",
-              borderRadius: 8,
-              paddingVertical: 12,
-              width: 200,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => handleAddBlock("math")}
-              style={{ paddingVertical: 14, paddingHorizontal: 16 }}
-            >
-              <Text style={{ fontSize: 16 }}>➕ Math</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleAddBlock("diagram")}
-              style={{ paddingVertical: 14, paddingHorizontal: 16 }}
-            >
-              <Text style={{ fontSize: 16 }}>➕ Diagram</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleAddBlock("bar")}
-              style={{ paddingVertical: 14, paddingHorizontal: 16 }}
-            >
-              <Text style={{ fontSize: 16 }}>➕ Bar</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </ScrollView>
   );
 }
