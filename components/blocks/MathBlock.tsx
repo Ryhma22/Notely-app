@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { calculateExpression } from "../MathUtils";
+import { useI18n } from "@/hooks/use-i18n";
 
 export default function MathBlock({
   onDelete,
 }: {
   onDelete?: () => void;
 }) {
+  const { t } = useI18n();
+
   const [expression, setExpression] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -15,7 +18,7 @@ export default function MathBlock({
     try {
       setResult(calculateExpression(expression));
     } catch {
-      setResult("Invalid expression");
+      setResult(t("invalidExpression"));
     }
   };
 
@@ -31,36 +34,20 @@ export default function MathBlock({
     >
       {onDelete && (
         <View style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
-          <TouchableOpacity
-            onPress={() => setOpen(!open)}
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderWidth: 1,
-              borderColor: "#CCC",
-              borderRadius: 6,
-              backgroundColor: "#F5F5F5",
-            }}
-          >
+          <TouchableOpacity onPress={() => setOpen(!open)}>
             <Text>✎</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      <Text
-        style={{
-          fontWeight: "600",
-          marginBottom: 6,
-          textAlign: "center",
-        }}
-      >
-        Math
+      <Text style={{ fontWeight: "600", marginBottom: 6, textAlign: "center" }}>
+        {t("math")}
       </Text>
 
       <TextInput
         value={expression}
         onChangeText={setExpression}
-        placeholder="2+3*5"
+        placeholder={t("mathPlaceholder")}
         style={{
           borderWidth: 1,
           borderColor: "#CCC",
@@ -78,7 +65,7 @@ export default function MathBlock({
           marginBottom: 6,
         }}
       >
-        <Text style={{ color: "#FFF" }}>Calculate</Text>
+        <Text style={{ color: "#FFF" }}>{t("calculate")}</Text>
       </TouchableOpacity>
 
       {result !== null && (
@@ -90,7 +77,7 @@ export default function MathBlock({
       {open && onDelete && (
         <TouchableOpacity onPress={onDelete}>
           <Text style={{ color: "#D32F2F", marginTop: 8 }}>
-            Delete block
+            {t("deleteBlock")}
           </Text>
         </TouchableOpacity>
       )}

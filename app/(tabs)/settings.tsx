@@ -1,69 +1,116 @@
-import { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Alert,
+  Platform,
+  ActionSheetIOS,
+  Pressable,
+} from "react-native";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+
 import { useAuth } from "@/hooks/use-auth";
 import { signOut, resetPassword, deleteAccount } from "@/services/auth";
-import { getUserSettings, updateUserSettings } from "@/services/settings";
-import { getProfile, updateProfile } from "@/services/profile";
-import type { UserSettings, Profile } from "@/lib/database.types";
+import { useSettings } from "@/hooks/use-settings";
+import { useI18n } from "@/hooks/use-i18n";
+import TextApp from "@/components/TextApp";
+import { getUsedCacheMB, clearCache } from "@/utils/cache";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    isDark,
+    fontSize,
+    language,
+    toggleDark,
+    setFontSize,
+    setLanguage,
+  } = useSettings();
+  const { t } = useI18n();
 
-  // Haetaan tietokannasta
-  const isDark = settings?.dark_mode ?? false;
+  const [usedCacheMB, setUsedCacheMB] = useState<number>(0);
+
   const backgroundColor = isDark ? "#121212" : "#FFFFFF";
   const textColor = isDark ? "#FFFFFF" : "#000000";
 
-  // Lataa asetukset ja profiili
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
-
-  const loadData = async () => {
-    setLoading(true);
-    const [settingsResult, profileResult] = await Promise.all([
-      getUserSettings(),
-      getProfile(),
-    ]);
-    setSettings(settingsResult.data);
-    setProfile(profileResult.data);
-    setLoading(false);
+  const loadCacheSize = async () => {
+    const size = await getUsedCacheMB();
+    setUsedCacheMB(size);
   };
 
-  const handleToggleDarkMode = async () => {
-    const newValue = !isDark;
-    // Päivitä UI heti
-    setSettings(settings ? { ...settings, dark_mode: newValue } : null);
-    // Tallenna tietokantaan
-    await updateUserSettings({ dark_mode: newValue });
-  };
+  useEffect(() => {
+    loadCacheSize();
+  }, []);
 
-  const handleChangePassword = async () => {
-    if (!user?.email) {
-      Alert.alert("Virhe", "Sähköpostia ei löydy");
-      return;
-    }
 
-    Alert.alert(
-      "Vaihda salasana",
-      `Lähetämme salasanan vaihtolinkin osoitteeseen ${user.email}`,
-      [
-        { text: "Peruuta", style: "cancel" },
+  const handleFontSizePress = () => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
         {
-          text: "Lähetä",
+          title: t("fontSize"),
+          options: ["Small", "Normal", "Large", "Cancel"],
+          cancelButtonIndex: 3,
+        },
+        (index) => {
+          if (index === 0) setFontSize("small");
+          if (index === 1) setFontSize("normal");
+          if (index === 2) setFontSize("large");
+        }
+      );
+    }
+  };
+
+  const handleDarkModePress = () => {
+  if (Platform.OS !== "ios") {
+    toggleDark();
+    return;
+  }
+
+    ActionSheetIOS.showActionSheetWithOptions(
+     {
+        title: t("darkMode"),
+        options: ["On", "Off", "Cancel"],
+        cancelButtonIndex: 2,
+     },
+     (index) => {
+       if (index === 0 && !isDark) toggleDark();
+        if (index === 1 && isDark) toggleDark();
+      }
+   );
+  };
+
+
+  const handleLanguagePress = () => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t("language"),
+          options: ["Suomi", "English", "Cancel"],
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) setLanguage("fi");
+          if (index === 1) setLanguage("en");
+        }
+      );
+    }
+  };
+
+  const handleClearCache = async () => {
+    Alert.alert(
+      t("clearCache"),
+      t("clearCache"),
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
           onPress: async () => {
-            const { error } = await resetPassword(user.email!);
-            if (error) {
-              Alert.alert("Virhe", error.message);
-            } else {
-              Alert.alert("Lähetetty!", "Tarkista sähköpostisi salasanan vaihtolinkki.");
-            }
+            await clearCache();
+            await loadCacheSize();
           },
         },
       ]
@@ -71,186 +118,149 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Kirjaudu ulos",
-      "Haluatko varmasti kirjautua ulos?",
-      [
-        { text: "Peruuta", style: "cancel" },
-        {
-          text: "Kirjaudu ulos",
-          style: "destructive",
-          onPress: async () => {
-            await signOut();
-            router.replace("/(auth)/sign-in");
-          },
-        },
-      ]
-    );
+    await signOut();
+    router.replace("/(auth)/sign-in");
   };
 
   const handleDeleteAccount = async () => {
-    Alert.alert(
-      "Poista tili",
-      "Oletko varma? Tätä toimintoa ei voi peruuttaa. Kaikki tietosi poistetaan pysyvästi.",
-      [
-        { text: "Peruuta", style: "cancel" },
-        {
-          text: "Poista tili",
-          style: "destructive",
-          onPress: async () => {
-            const { error } = await deleteAccount();
-            if (error) {
-              Alert.alert("Virhe", error.message);
-            } else {
-              await signOut();
-              router.replace("/(auth)/sign-in");
-              Alert.alert("Tili poistettu", "Tilisi on poistettu onnistuneesti.");
-            }
-          },
-        },
-      ]
-    );
+    await deleteAccount();
+    await signOut();
+    router.replace("/(auth)/sign-in");
   };
 
-  // Käytä profiilista nimeä tai fallback sähköpostiin
-  const displayName = profile?.full_name || 
-                      user?.user_metadata?.full_name || 
-                      user?.email?.split("@")[0] || 
-                      "Käyttäjä";
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "User";
 
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor }]}>
+      {/* USER */}
       <View style={styles.userBox}>
         <Image
           source={require("../../assets/images/avatar.jpg")}
           style={styles.avatar}
         />
-        <Text style={[styles.userName, { color: textColor }]}>{displayName}</Text>
-        <Text style={styles.userEmail}>{user?.email || ""}</Text>
+        <TextApp style={[styles.userName, { color: textColor }]}>
+          {displayName}
+        </TextApp>
+        <TextApp style={styles.userEmail}>{user?.email}</TextApp>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: textColor }]}>Account</Text>
+      {/* ACCOUNT */}
+      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
+        {t("account")}
+      </TextApp>
       <View style={styles.sectionBox}>
-        <SettingsItem label="Change password" textColor={textColor} onPress={handleChangePassword} />
-        <SettingsItem label="Log out" textColor={textColor} onPress={handleLogout} />
-        <SettingsItem label="Delete account" danger textColor={textColor} onPress={handleDeleteAccount} />
+        <SettingsItem label={t("changePassword")} textColor={textColor} onPress={handleLogout} />
+        <SettingsItem label={t("logout")} textColor={textColor} onPress={handleLogout} />
+        <SettingsItem label={t("deleteAccount")} danger textColor={textColor} onPress={handleDeleteAccount} />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: textColor }]}>Preferences</Text>
+      {/* PREFERENCES */}
+      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
+        {t("preferences")}
+      </TextApp>
       <View style={styles.sectionBox}>
-        <SettingsItem 
-          label={`Language: ${settings?.language || 'fi'}`} 
-          textColor={textColor} 
+        <SettingsItem
+          label={`${t("language")}: ${language.toUpperCase()}`}
+          textColor={textColor}
+          onPress={handleLanguagePress} // 👈 POPUP
         />
         <SettingsItem
-          label={`Dark mode: ${isDark ? "On" : "Off"}`}
-          onPress={handleToggleDarkMode}
+         label={`${t("darkMode")}: ${isDark ? "On" : "Off"}`}
+         textColor={textColor}
+         onPress={handleDarkModePress}
+        />
+
+
+        <SettingsItem
+          label={`${t("fontSize")}: ${fontSize}`}
+          textColor={textColor}
+          onPress={handleFontSizePress}
+        />
+      </View>
+
+      {/* STORAGE */}
+      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
+        {t("storage")}
+      </TextApp>
+      <View style={styles.sectionBox}>
+        <SettingsItem
+          label={`${t("usedSpace")}: ${usedCacheMB} MB`}
           textColor={textColor}
         />
-        <SettingsItem 
-          label={`Font size: ${settings?.font_size || 'medium'}`} 
-          textColor={textColor} 
+        <SettingsItem
+          label={t("clearCache")}
+          textColor={textColor}
+          onPress={handleClearCache}
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: textColor }]}>Storage</Text>
+      {/* ABOUT */}
+      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
+        {t("about")}
+      </TextApp>
       <View style={styles.sectionBox}>
-        <SettingsItem label="Used space" textColor={textColor} />
-        <SettingsItem label="Clear cache" textColor={textColor} />
+        <SettingsItem label={`${t("version")}: 1.0.0`} textColor={textColor} />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: textColor }]}>Calculator</Text>
+
+      {/* PRO+ */}
+      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
+       PRO+
+      </TextApp>
       <View style={styles.sectionBox}>
-        <SettingsItem 
-          label={`Precision: ${settings?.calculator_precision || 10}`} 
-          textColor={textColor} 
+       <SettingsItem
+        label="Upgrade to Pro"
+        textColor={textColor}
+        onPress={() => {}}
         />
-      </View>
+        </View>
 
-      <Text style={[styles.sectionTitle, { color: textColor }]}>About</Text>
-      <View style={styles.sectionBox}>
-        <SettingsItem label="Version: 1.0.0" textColor={textColor} />
-        <SettingsItem label="Privacy policy" textColor={textColor} />
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: textColor }]}>PRO+</Text>
-      <View style={styles.sectionBox}>
-        <SettingsItem label="Upgrade to Pro" pro textColor={textColor} />
-      </View>
-    </ScrollView>
+      </ScrollView>
   );
 }
 
 function SettingsItem({
   label,
-  danger,
-  pro,
   onPress,
+  danger,
   textColor,
 }: {
   label: string;
-  danger?: boolean;
-  pro?: boolean;
   onPress?: () => void;
+  danger?: boolean;
   textColor: string;
 }) {
   return (
     <TouchableOpacity style={styles.item} onPress={onPress}>
-      <Text
+      <TextApp
         style={[
           styles.itemText,
           { color: textColor },
           danger && { color: "#D32F2F" },
-          pro && { fontWeight: "bold" },
         ]}
       >
         {label}
-      </Text>
+      </TextApp>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  userBox: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom: 8,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  userEmail: {
-    fontSize: 14,
-    color: "#666666",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 16,
-    marginBottom: 6,
-    color: "#555555",
-  },
-  sectionBox: {
-    borderWidth: 1,
-    borderColor: "#DDDDDD",
-  },
+  container: { padding: 16 },
+  userBox: { alignItems: "center", marginBottom: 24 },
+  avatar: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
+  userName: { fontSize: 18, fontWeight: "bold" },
+  userEmail: { fontSize: 14, color: "#666" },
+  sectionTitle: { fontWeight: "600", marginTop: 16, marginBottom: 6 },
+  sectionBox: { borderWidth: 1, borderColor: "#DDD" },
   item: {
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#DDDDDD",
+    borderBottomColor: "#DDD",
   },
-  itemText: {
-    fontSize: 16,
-  },
+  itemText: {},
 });

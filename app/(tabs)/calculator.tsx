@@ -1,50 +1,54 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { View, TextInput, TouchableOpacity } from "react-native";
 import { calculateExpression } from "../../components/MathUtils";
+import { useSettings } from "@/hooks/use-settings";
+import { Colors } from "@/constants/Colors";
+import TextApp from "@/components/TextApp";
+import { useI18n } from "@/hooks/use-i18n";
 
 export default function CalculatorScreen() {
+  const { isDark } = useSettings();
+  const { t } = useI18n();
+  const colors = isDark ? Colors.dark : Colors.light;
+
   const [expression, setExpression] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const calculate = () => {
     try {
-      const value = calculateExpression(expression);
-      setResult(value);
+      setResult(calculateExpression(expression));
       setError(null);
     } catch {
       setResult(null);
-      setError("Invalid expression");
+      setError(t("invalidExpression"));
     }
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor:"white" }}>
-      <Text
+    <View style={{ flex: 1, padding: 16, backgroundColor: colors.background }}>
+      <TextApp
         style={{
           fontSize: 20,
           fontWeight: "600",
-          marginBottom: 16,
           textAlign: "center",
+          marginBottom: 16,
         }}
       >
-        Calculator
-      </Text>
+        {t("calculator")}
+      </TextApp>
 
       <TextInput
         value={expression}
         onChangeText={setExpression}
-        placeholder="e.g. (2+3)*5"
+        placeholder={t("calculatorPlaceholder")}
+        placeholderTextColor={colors.icon}
         style={{
           borderWidth: 1,
-          borderColor: "#CCC",
+          borderColor: colors.icon,
           padding: 12,
           fontSize: 16,
+          color: colors.text,
           marginBottom: 12,
         }}
       />
@@ -52,25 +56,26 @@ export default function CalculatorScreen() {
       <TouchableOpacity
         onPress={calculate}
         style={{
-          backgroundColor: "#1976D2",
+          backgroundColor: colors.tint,
           padding: 12,
           alignItems: "center",
-          marginBottom: 12,
         }}
       >
-        <Text style={{ color: "#FFF", fontSize: 18 }}>=</Text>
+        <TextApp style={{ color: colors.background, fontSize: 18 }}>
+          =
+        </TextApp>
       </TouchableOpacity>
 
-      {result !== null && (
-        <Text style={{ fontSize: 16, textAlign: "center" }}>
-          Result: <Text style={{ fontWeight: "bold" }}>{result}</Text>
-        </Text>
+      {result && (
+        <TextApp style={{ textAlign: "center", marginTop: 12 }}>
+          {t("result")}: {result}
+        </TextApp>
       )}
 
       {error && (
-        <Text style={{ color: "red", textAlign: "center" }}>
+        <TextApp style={{ color: "red", textAlign: "center" }}>
           {error}
-        </Text>
+        </TextApp>
       )}
     </View>
   );
