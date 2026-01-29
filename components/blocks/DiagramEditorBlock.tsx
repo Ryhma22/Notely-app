@@ -1,27 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import DiagramBlock from "./DiagramBlock";
 import { useI18n } from "@/hooks/use-i18n";
+import type { NoteBlock } from "@/lib/database.types";
 
 type Point = { x: number; y: number };
 
 export default function DiagramEditorBlock({
+  block,
+  onUpdate,
   onDelete,
 }: {
+  block: NoteBlock;
+  onUpdate: (data: any) => void;
   onDelete?: () => void;
 }) {
+
   const { t } = useI18n();
 
   const [open, setOpen] = useState(false);
-  const [points, setPoints] = useState<Point[]>([
-    { x: 1, y: 2 },
-    { x: 2, y: 4 },
-  ]);
 
-  const [title, setTitle] = useState(t("diagram"));
+
+const initialData =
+  typeof block.data === "object" && block.data !== null && !Array.isArray(block.data)
+    ? block.data
+    : {};
+
+const [points, setPoints] = useState<Point[]>(
+  Array.isArray((initialData as any).points)
+    ? (initialData as any).points
+    : [
+        { x: 1, y: 2 },
+        { x: 2, y: 4 },
+      ]
+);
+
+const [lineMode, setLineMode] = useState<
+  "trend" | "straight" | "wave"
+>(
+  (initialData as any).lineMode === "straight" ||
+  (initialData as any).lineMode === "wave"
+    ? (initialData as any).lineMode
+    : "trend"
+);
+
+const [title, setTitle] = useState(
+  typeof (initialData as any).title === "string"
+    ? (initialData as any).title
+    : t("diagram")
+);
+
+useEffect(() => {
+  onUpdate({
+    title,
+    lineMode,
+    points,
+  });
+}, [title, lineMode, points]);
+
+
   const [editingTitle, setEditingTitle] = useState(false);
-  const [lineMode, setLineMode] =
-    useState<"trend" | "straight" | "wave">("trend");
+  
 
   const updatePoint = (i: number, key: "x" | "y", v: string) => {
     const next = [...points];
@@ -36,6 +75,8 @@ export default function DiagramEditorBlock({
   const removePoint = (i: number) => {
     setPoints(points.filter((_, idx) => idx !== i));
   };
+
+  
 
   return (
     <View

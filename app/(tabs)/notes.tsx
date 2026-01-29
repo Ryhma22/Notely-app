@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useNavigation } from "expo-router";
 
 import { useSettings } from "@/hooks/use-settings";
 import { useI18n } from "@/hooks/use-i18n";
@@ -26,13 +26,17 @@ import {
   getNoteBlocks,
   createNoteBlock,
   deleteNoteBlock,
+  updateNoteBlock,
 } from "@/services/notes";
+
 import type { Note, NoteBlock, BlockType } from "@/lib/database.types";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function NotesScreen() {
   const { isDark } = useSettings();
   const { t } = useI18n();
   const colors = isDark ? Colors.dark : Colors.light;
+  const navigation = useNavigation();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [blocks, setBlocks] = useState<NoteBlock[]>([]);
@@ -41,6 +45,31 @@ export default function NotesScreen() {
   const [saving, setSaving] = useState(false);
 
   const activeNote = notes.find((n) => n.id === activeNoteId);
+
+  const openAddBlockMenu = () => {
+    if (!activeNote) return;
+
+    Alert.alert(
+      t("addBlock"),
+      "",
+      [
+        { text: t("math"), onPress: () => handleAddBlock("math") },
+        { text: t("diagram"), onPress: () => handleAddBlock("diagram") },
+        { text: t("barChart"), onPress: () => handleAddBlock("bar") },
+        { text: t("cancel"), style: "cancel" },
+      ]
+    );
+  };
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={openAddBlockMenu} style={{ marginRight: 12 }}>
+          <Ionicons name="menu" size={22} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, activeNoteId, blocks.length]);
 
   useFocusEffect(
     useCallback(() => {
@@ -100,11 +129,12 @@ export default function NotesScreen() {
     setNotes(notes.map((n) => (n.id === id ? { ...n, ...updates } : n)));
     await updateNote(id, updates);
   };
+
   const handleDeleteBlock = async (blockId: string) => {
     await deleteNoteBlock(blockId);
     setBlocks(blocks.filter((b) => b.id !== blockId));
   };
-  
+
   const handleAddBlock = async (type: BlockType) => {
     if (!activeNote) return;
 
@@ -238,12 +268,34 @@ export default function NotesScreen() {
 
       {blocks.map((block) => {
         const onDelete = () => handleDeleteBlock(block.id);
+
         if (block.type === "diagram")
-          return <DiagramEditorBlock key={block.id} onDelete={onDelete} />;
-        if (block.type === "bar")
-          return <BarChartEditorBlock key={block.id} onDelete={onDelete} />;
+          return (
+            <DiagramEditorBlock
+              key={block.id}
+              block={block}
+              onUpdate={(data) =>
+                updateNoteBlock(block.id, { data })
+              }
+              onDelete={onDelete}
+            />
+          );
+
+if (block.type === "bar")
+  return (
+    <BarChartEditorBlock
+      key={block.id}
+      block={block}
+      onUpdate={(data) =>
+        updateNoteBlock(block.id, { data })
+      }
+      onDelete={onDelete}
+    />
+  );
+
         if (block.type === "math")
           return <MathBlock key={block.id} onDelete={onDelete} />;
+
         return null;
       })}
     </ScrollView>

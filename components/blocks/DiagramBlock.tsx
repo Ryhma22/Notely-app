@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import Svg, {
+  G,
   Line,
   Circle,
   Text as SvgText,
@@ -63,10 +64,10 @@ export default function DiagramBlock({
           const y = padding + (i * (height - 2 * padding)) / 4;
           const x = padding + (i * (width - 2 * padding)) / 4;
           return (
-            <>
+            <G>
               <Line key={`h${i}`} x1={padding} y1={y} x2={width - padding} y2={y} stroke="#E0E0E0" />
               <Line key={`v${i}`} x1={x} y1={padding} x2={x} y2={height - padding} stroke="#E0E0E0" />
-            </>
+            </G>
           );
         })}
 
