@@ -31,7 +31,7 @@ export interface NoteUpdate {
 }
 
 // Note Blocks
-export type BlockType = 'math' | 'diagram' | 'bar';
+export type BlockType = 'math' | 'diagram' | 'bar' | 'image';
 
 export interface NoteBlock {
   id: string;

@@ -14,9 +14,15 @@ import { useI18n } from "@/hooks/use-i18n";
 import { Colors } from "@/constants/Colors";
 import TextApp from "@/components/TextApp";
 
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { Image } from "react-native";
+import { supabase } from "@/lib/supabase";
+
 import MathBlock from "../../components/blocks/MathBlock";
 import DiagramEditorBlock from "../../components/blocks/DiagramEditorBlock";
 import BarChartEditorBlock from "../../components/blocks/BarChartEditorBlock";
+import ImageBlock from "../../components/blocks/ImageBlock";
 
 import {
   getNotes,
@@ -49,16 +55,13 @@ export default function NotesScreen() {
   const openAddBlockMenu = () => {
     if (!activeNote) return;
 
-    Alert.alert(
-      t("addBlock"),
-      "",
-      [
-        { text: t("math"), onPress: () => handleAddBlock("math") },
-        { text: t("diagram"), onPress: () => handleAddBlock("diagram") },
-        { text: t("barChart"), onPress: () => handleAddBlock("bar") },
-        { text: t("cancel"), style: "cancel" },
-      ]
-    );
+    Alert.alert(t("addBlock"), "", [
+      { text: t("math"), onPress: () => handleAddBlock("math") },
+      { text: t("diagram"), onPress: () => handleAddBlock("diagram") },
+      { text: t("barChart"), onPress: () => handleAddBlock("bar") },
+      { text: t("addImage"), onPress: handleAddImageBlock },
+      { text: t("cancel"), style: "cancel" },
+    ]);
   };
 
   useLayoutEffect(() => {
@@ -146,6 +149,69 @@ export default function NotesScreen() {
     });
 
     if (data) setBlocks([...blocks, data]);
+  };
+
+  const base64ToUint8Array = (base64: string) => {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  };
+
+  const handleAddImageBlock = async () => {
+    if (!activeNote) return;
+
+    const { status } =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert("Lupa tarvitaan", "Gallerian käyttö vaatii luvan");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+
+    if (!user) return;
+
+    const path = `${user.id}/${Date.now()}.jpg`;
+
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: "base64",
+    });
+
+    const fileData = base64ToUint8Array(base64);
+
+    const { error: uploadError } = await supabase.storage
+      .from("note-images")
+      .upload(path, fileData, {
+        contentType: "image/jpeg",
+        upsert: false,
+      });
+
+    if (uploadError) return;
+
+    const { data } = await createNoteBlock({
+      note_id: activeNote.id,
+      type: "image",
+      position: blocks.length,
+      data: { path },
+    });
+
+    if (data) {
+      setBlocks([...blocks, data]);
+    }
   };
 
   if (loading) {
@@ -281,17 +347,23 @@ export default function NotesScreen() {
             />
           );
 
-if (block.type === "bar")
-  return (
-    <BarChartEditorBlock
-      key={block.id}
-      block={block}
-      onUpdate={(data) =>
-        updateNoteBlock(block.id, { data })
-      }
-      onDelete={onDelete}
-    />
-  );
+        if (block.type === "bar")
+          return (
+            <BarChartEditorBlock
+              key={block.id}
+              block={block}
+              onUpdate={(data) =>
+                updateNoteBlock(block.id, { data })
+              }
+              onDelete={onDelete}
+            />
+          );
+
+        if (block.type === "image")
+          return <ImageBlock key={block.id} 
+        block={block} 
+        onDelete={() => handleDeleteBlock(block.id)} 
+        />;
 
         if (block.type === "math")
           return <MathBlock key={block.id} onDelete={onDelete} />;

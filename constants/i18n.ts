@@ -57,6 +57,7 @@ export const translations: Record<Language, Record<string, string>> = {
     value: "Arvo",
 
     /* === DIAGRAM === */
+    addImage:"Lisää kuva",
     diagram: "Diagrammi",
     addPoint: "Lisää piste",
     trend: "Trendi",
@@ -64,10 +65,6 @@ export const translations: Record<Language, Record<string, string>> = {
     wave: "Aalto",
     x: "x",
     y: "y",
-
-    pro: "PRO+",
-    upgrade: "Päivitä Pro-versioon",
-
   },
 
   en: {
@@ -119,6 +116,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
 
     /* === BAR CHART === */
+    addImage:"Add image",
     barChart: "Bar chart",
     addBar: "Add bar",
     deleteChart: "Delete chart",
@@ -133,8 +131,5 @@ export const translations: Record<Language, Record<string, string>> = {
     wave: "Wave",
     x: "x",
     y: "y",
-
-    pro: "PRO+",
-    upgrade: "Upgrade to Pro",
   },
 };
