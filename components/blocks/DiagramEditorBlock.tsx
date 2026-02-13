@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import DiagramBlock from "./DiagramBlock";
 import { useI18n } from "@/hooks/use-i18n";
+import { useSettings } from "@/hooks/use-settings";
+import { Colors, DANGER_COLOR } from "@/constants/Colors";
 import type { NoteBlock } from "@/lib/database.types";
 
 type Point = { x: number; y: number };
@@ -17,6 +19,8 @@ export default function DiagramEditorBlock({
 }) {
 
   const { t } = useI18n();
+  const { isDark } = useSettings();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const [open, setOpen] = useState(false);
 
@@ -82,13 +86,13 @@ useEffect(() => {
     <View
       style={{
         borderWidth: 1,
-        borderColor: "#DDD",
+        borderColor: colors.icon + "50",
+        borderRadius: 12,
         padding: 12,
         marginBottom: 16,
-        backgroundColor: "#FFF",
+        backgroundColor: colors.background,
       }}
     >
-      {/* EDIT BUTTON */}
       <View style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
         <TouchableOpacity
           onPress={() => setOpen(!open)}
@@ -96,16 +100,15 @@ useEffect(() => {
             paddingHorizontal: 10,
             paddingVertical: 6,
             borderWidth: 1,
-            borderColor: "#CCC",
+            borderColor: colors.icon + "50",
             borderRadius: 6,
-            backgroundColor: "#F5F5F5",
+            backgroundColor: colors.icon + "20",
           }}
         >
-          <Text>✎</Text>
+          <Text style={{ color: colors.text }}>✎</Text>
         </TouchableOpacity>
       </View>
 
-      {/* TITLE */}
       {editingTitle ? (
         <TextInput
           value={title}
@@ -117,6 +120,7 @@ useEffect(() => {
             fontWeight: "600",
             marginBottom: 8,
             textAlign: "center",
+            color: colors.text,
           }}
         />
       ) : (
@@ -127,6 +131,7 @@ useEffect(() => {
               fontWeight: "600",
               marginBottom: 8,
               textAlign: "center",
+              color: colors.text,
             }}
           >
             {title}
@@ -134,13 +139,10 @@ useEffect(() => {
         </TouchableOpacity>
       )}
 
-      {/* CHART */}
       <DiagramBlock data={points} lineMode={lineMode} />
 
-      {/* EDIT PANEL */}
       {open && (
         <View style={{ marginTop: 12 }}>
-          {/* LINE MODE */}
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
             {(["trend", "straight", "wave"] as const).map((m) => (
               <TouchableOpacity
@@ -150,15 +152,15 @@ useEffect(() => {
                   paddingVertical: 6,
                   paddingHorizontal: 10,
                   borderWidth: 1,
-                  borderColor: lineMode === m ? "#1976D2" : "#CCC",
+                  borderColor:
+                    lineMode === m ? colors.tint : colors.icon + "50",
                 }}
               >
-                <Text>{t(m)}</Text>
+                <Text style={{ color: colors.text }}>{t(m)}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* POINTS */}
           {points.map((p, i) => (
             <View
               key={i}
@@ -172,44 +174,43 @@ useEffect(() => {
               <TextInput
                 value={String(p.x)}
                 placeholder={t("x")}
+                placeholderTextColor={colors.icon}
                 keyboardType="numeric"
                 onChangeText={(v) => updatePoint(i, "x", v)}
                 style={{
                   borderWidth: 1,
-                  borderColor: "#CCC",
+                  borderColor: colors.icon + "50",
                   padding: 6,
                   width: 60,
+                  color: colors.text,
                 }}
               />
               <TextInput
                 value={String(p.y)}
                 placeholder={t("y")}
+                placeholderTextColor={colors.icon}
                 keyboardType="numeric"
                 onChangeText={(v) => updatePoint(i, "y", v)}
                 style={{
                   borderWidth: 1,
-                  borderColor: "#CCC",
+                  borderColor: colors.icon + "50",
                   padding: 6,
                   width: 60,
+                  color: colors.text,
                 }}
               />
               <TouchableOpacity onPress={() => removePoint(i)}>
-                <Text style={{ color: "#D32F2F", fontSize: 18 }}>✕</Text>
+                <Text style={{ color: DANGER_COLOR, fontSize: 18 }}>✕</Text>
               </TouchableOpacity>
             </View>
           ))}
 
-          {/* ADD / DELETE */}
           <TouchableOpacity onPress={addPoint} style={{ marginTop: 6 }}>
-            <Text style={{ color: "#1976D2" }}>
-              {t("addPoint")}
-            </Text>
+            <Text style={{ color: colors.tint }}>{t("addPoint")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onDelete} style={{ marginTop: 12 }}>
-            <Text style={{ color: "#D32F2F" }}>
-              {t("deleteChart")}
-            </Text>
+            <Text style={{ color: DANGER_COLOR }}>{t("deleteChart")}</Text>
           </TouchableOpacity>
         </View>
       )}

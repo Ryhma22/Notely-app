@@ -7,17 +7,18 @@ import {
   Alert,
   Platform,
   ActionSheetIOS,
-  Pressable,
 } from "react-native";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/hooks/use-auth";
-import { signOut, resetPassword, deleteAccount } from "@/services/auth";
+import { signOut, deleteAccount } from "@/services/auth";
 import { useSettings } from "@/hooks/use-settings";
 import { useI18n } from "@/hooks/use-i18n";
 import TextApp from "@/components/TextApp";
 import { getUsedCacheMB, clearCache } from "@/utils/cache";
+import { Colors, DANGER_COLOR } from "@/constants/Colors";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
@@ -30,11 +31,9 @@ export default function SettingsScreen() {
     setLanguage,
   } = useSettings();
   const { t } = useI18n();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const [usedCacheMB, setUsedCacheMB] = useState<number>(0);
-
-  const backgroundColor = isDark ? "#121212" : "#FFFFFF";
-  const textColor = isDark ? "#FFFFFF" : "#000000";
 
   const loadCacheSize = async () => {
     const size = await getUsedCacheMB();
@@ -45,13 +44,17 @@ export default function SettingsScreen() {
     loadCacheSize();
   }, []);
 
-
   const handleFontSizePress = () => {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: t("fontSize"),
-          options: ["Small", "Normal", "Large", "Cancel"],
+          options: [
+            t("fontSizeSmall"),
+            t("fontSizeNormal"),
+            t("fontSizeLarge"),
+            t("cancel"),
+          ],
           cancelButtonIndex: 3,
         },
         (index) => {
@@ -60,35 +63,44 @@ export default function SettingsScreen() {
           if (index === 2) setFontSize("large");
         }
       );
+    } else {
+      Alert.alert(t("fontSize"), "", [
+        { text: t("fontSizeSmall"), onPress: () => setFontSize("small") },
+        { text: t("fontSizeNormal"), onPress: () => setFontSize("normal") },
+        { text: t("fontSizeLarge"), onPress: () => setFontSize("large") },
+        { text: t("cancel"), style: "cancel" },
+      ]);
     }
   };
 
   const handleDarkModePress = () => {
-  if (Platform.OS !== "ios") {
-    toggleDark();
-    return;
-  }
-
-    ActionSheetIOS.showActionSheetWithOptions(
-     {
-        title: t("darkMode"),
-        options: ["On", "Off", "Cancel"],
-        cancelButtonIndex: 2,
-     },
-     (index) => {
-       if (index === 0 && !isDark) toggleDark();
-        if (index === 1 && isDark) toggleDark();
-      }
-   );
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t("darkMode"),
+          options: [t("on"), t("off"), t("cancel")],
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0 && !isDark) toggleDark();
+          if (index === 1 && isDark) toggleDark();
+        }
+      );
+    } else {
+      Alert.alert(t("darkMode"), "", [
+        { text: t("on"), onPress: () => !isDark && toggleDark() },
+        { text: t("off"), onPress: () => isDark && toggleDark() },
+        { text: t("cancel"), style: "cancel" },
+      ]);
+    }
   };
-
 
   const handleLanguagePress = () => {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: t("language"),
-          options: ["Suomi", "English", "Cancel"],
+          options: [t("langFi"), t("langEn"), t("cancel")],
           cancelButtonIndex: 2,
         },
         (index) => {
@@ -96,25 +108,31 @@ export default function SettingsScreen() {
           if (index === 1) setLanguage("en");
         }
       );
+    } else {
+      Alert.alert(t("language"), "", [
+        { text: t("langFi"), onPress: () => setLanguage("fi") },
+        { text: t("langEn"), onPress: () => setLanguage("en") },
+        { text: t("cancel"), style: "cancel" },
+      ]);
     }
   };
 
+  const handleChangePassword = () => {
+    router.push("/(auth)/forgot-password");
+  };
+
   const handleClearCache = async () => {
-    Alert.alert(
-      t("clearCache"),
-      t("clearCache"),
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            await clearCache();
-            await loadCacheSize();
-          },
+    Alert.alert(t("clearCache"), t("clearCacheConfirm"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          await clearCache();
+          await loadCacheSize();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleLogout = async () => {
@@ -123,144 +141,317 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = async () => {
-    await deleteAccount();
-    await signOut();
-    router.replace("/(auth)/sign-in");
+    Alert.alert(t("deleteAccount"), t("areYouSure"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          await deleteAccount();
+          await signOut();
+          router.replace("/(auth)/sign-in");
+        },
+      },
+    ]);
   };
 
   const displayName =
     user?.user_metadata?.full_name ||
     user?.email?.split("@")[0] ||
-    "User";
+    t("user");
+
+  const pageBackground = isDark ? "#0D0E0F" : "#F2F3F5";
+
+  const sectionCardStyle = {
+    backgroundColor: colors.background,
+    borderColor: colors.icon + "30",
+    ...(Platform.OS === "android"
+      ? { elevation: 1 }
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: isDark ? 0.2 : 0.06,
+          shadowRadius: 4,
+        }),
+  };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor }]}>
-      {/* USER */}
-      <View style={styles.userBox}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: pageBackground }}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Profiilikortti */}
+      <View style={[styles.profileCard, sectionCardStyle]}>
         <Image
           source={require("../../assets/images/avatar.jpg")}
           style={styles.avatar}
         />
-        <TextApp style={[styles.userName, { color: textColor }]}>
+        <TextApp style={[styles.userName, { color: colors.text }]}>
           {displayName}
         </TextApp>
-        <TextApp style={styles.userEmail}>{user?.email}</TextApp>
+        <TextApp style={[styles.userEmail, { color: colors.icon }]}>
+          {user?.email}
+        </TextApp>
       </View>
 
-      {/* ACCOUNT */}
-      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
-        {t("account")}
+      {/* Tili */}
+      <TextApp style={[styles.sectionTitle, { color: colors.icon }]}>
+        {t("account").toUpperCase()}
       </TextApp>
-      <View style={styles.sectionBox}>
-        <SettingsItem label={t("changePassword")} textColor={textColor} onPress={handleLogout} />
-        <SettingsItem label={t("logout")} textColor={textColor} onPress={handleLogout} />
-        <SettingsItem label={t("deleteAccount")} danger textColor={textColor} onPress={handleDeleteAccount} />
+      <View style={[styles.sectionCard, sectionCardStyle]}>
+        <SettingsItem
+          label={t("changePassword")}
+          icon="key-outline"
+          onPress={handleChangePassword}
+          colors={colors}
+          showChevron
+          isLast={false}
+        />
+        <SettingsItem
+          label={t("logout")}
+          icon="log-out-outline"
+          onPress={handleLogout}
+          colors={colors}
+          showChevron
+          isLast={false}
+        />
+        <SettingsItem
+          label={t("deleteAccount")}
+          icon="trash-outline"
+          danger
+          onPress={handleDeleteAccount}
+          colors={colors}
+          isLast
+        />
       </View>
 
-      {/* PREFERENCES */}
-      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
-        {t("preferences")}
+      {/* Asetukset */}
+      <TextApp style={[styles.sectionTitle, { color: colors.icon }]}>
+        {t("preferences").toUpperCase()}
       </TextApp>
-      <View style={styles.sectionBox}>
+      <View style={[styles.sectionCard, sectionCardStyle]}>
         <SettingsItem
-          label={`${t("language")}: ${language.toUpperCase()}`}
-          textColor={textColor}
-          onPress={handleLanguagePress} // 👈 POPUP
+          label={t("language")}
+          value={language === "fi" ? t("langFi") : t("langEn")}
+          icon="language-outline"
+          onPress={handleLanguagePress}
+          colors={colors}
+          showChevron
+          isLast={false}
         />
         <SettingsItem
-         label={`${t("darkMode")}: ${isDark ? "On" : "Off"}`}
-         textColor={textColor}
-         onPress={handleDarkModePress}
+          label={t("darkMode")}
+          value={isDark ? t("on") : t("off")}
+          icon="moon-outline"
+          onPress={handleDarkModePress}
+          colors={colors}
+          showChevron
+          isLast={false}
         />
-
-
         <SettingsItem
-          label={`${t("fontSize")}: ${fontSize}`}
-          textColor={textColor}
+          label={t("fontSize")}
+          value={fontSize}
+          icon="text-outline"
           onPress={handleFontSizePress}
+          colors={colors}
+          showChevron
+          isLast
         />
       </View>
 
-      {/* STORAGE */}
-      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
-        {t("storage")}
+      {/* Tallennustila */}
+      <TextApp style={[styles.sectionTitle, { color: colors.icon }]}>
+        {t("storage").toUpperCase()}
       </TextApp>
-      <View style={styles.sectionBox}>
+      <View style={[styles.sectionCard, sectionCardStyle]}>
         <SettingsItem
-          label={`${t("usedSpace")}: ${usedCacheMB} MB`}
-          textColor={textColor}
+          label={t("usedSpace")}
+          value={`${usedCacheMB} MB`}
+          icon="server-outline"
+          colors={colors}
+          isLast={false}
         />
         <SettingsItem
           label={t("clearCache")}
-          textColor={textColor}
+          icon="trash-outline"
           onPress={handleClearCache}
+          colors={colors}
+          showChevron
+          isLast
         />
       </View>
 
-      {/* ABOUT */}
-      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
-        {t("about")}
+      {/* Tietoja */}
+      <TextApp style={[styles.sectionTitle, { color: colors.icon }]}>
+        {t("about").toUpperCase()}
       </TextApp>
-      <View style={styles.sectionBox}>
-        <SettingsItem label={`${t("version")}: 1.0.0`} textColor={textColor} />
+      <View style={[styles.sectionCard, sectionCardStyle]}>
+        <SettingsItem
+          label={t("version")}
+          value="1.0.0"
+          icon="information-circle-outline"
+          colors={colors}
+          isLast
+        />
       </View>
 
-
-      {/* PRO+ */}
-      <TextApp style={[styles.sectionTitle, { color: textColor }]}>
-       PRO+
+      {/* PRO+ placeholder */}
+      <TextApp style={[styles.sectionTitle, { color: colors.icon }]}>
+        {t("pro").toUpperCase()}
       </TextApp>
-      <View style={styles.sectionBox}>
-       <SettingsItem
-        label="Upgrade to Pro"
-        textColor={textColor}
-        onPress={() => {}}
+      <View style={[styles.sectionCard, sectionCardStyle]}>
+        <SettingsItem
+          label={t("upgrade")}
+          icon="star-outline"
+          onPress={() => {}}
+          colors={colors}
+          showChevron
+          isLast
         />
-        </View>
-
-      </ScrollView>
+      </View>
+    </ScrollView>
   );
 }
 
 function SettingsItem({
   label,
+  value,
+  icon,
   onPress,
   danger,
-  textColor,
+  colors,
+  showChevron,
+  isLast = false,
 }: {
   label: string;
+  value?: string;
+  icon?: string;
   onPress?: () => void;
   danger?: boolean;
-  textColor: string;
+  colors: { text: string; icon: string };
+  showChevron?: boolean;
+  isLast?: boolean;
 }) {
+  const isPressable = !!onPress;
+
   return (
-    <TouchableOpacity style={styles.item} onPress={onPress}>
-      <TextApp
-        style={[
-          styles.itemText,
-          { color: textColor },
-          danger && { color: "#D32F2F" },
-        ]}
-      >
-        {label}
-      </TextApp>
+    <TouchableOpacity
+      style={[
+        styles.item,
+        { borderBottomColor: colors.icon + "20" },
+        isLast && styles.itemLast,
+      ]}
+      onPress={onPress}
+      disabled={!isPressable}
+      activeOpacity={isPressable ? 0.6 : 1}
+    >
+      <View style={styles.itemLeft}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={danger ? DANGER_COLOR : colors.icon}
+            style={styles.itemIcon}
+          />
+        )}
+        <TextApp
+          style={[
+            styles.itemLabel,
+            { color: danger ? DANGER_COLOR : colors.text },
+          ]}
+        >
+          {label}
+        </TextApp>
+      </View>
+      {(value !== undefined || showChevron) && (
+        <View style={styles.itemRight}>
+          {value !== undefined && (
+            <TextApp style={[styles.itemValue, { color: colors.icon }]}>
+              {value}
+            </TextApp>
+          )}
+          {showChevron && (
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.icon}
+            />
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  userBox: { alignItems: "center", marginBottom: 24 },
-  avatar: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
-  userName: { fontSize: 18, fontWeight: "bold" },
-  userEmail: { fontSize: 14, color: "#666" },
-  sectionTitle: { fontWeight: "600", marginTop: 16, marginBottom: 6 },
-  sectionBox: { borderWidth: 1, borderColor: "#DDD" },
-  item: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DDD",
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
   },
-  itemText: {},
+  profileCard: {
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  sectionCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  itemLast: {
+    borderBottomWidth: 0,
+  },
+  itemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  itemIcon: {
+    marginRight: 12,
+  },
+  itemLabel: {
+    fontSize: 16,
+  },
+  itemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  itemValue: {
+    fontSize: 14,
+  },
 });

@@ -3,11 +3,13 @@ import type { Note, NoteInsert, NoteUpdate, NoteBlock, NoteBlockInsert, NoteBloc
 
 // ============ NOTES ============
 
-export async function getNotes() {
+export type NoteSortOrder = "newest" | "oldest";
+
+export async function getNotes(sortOrder: NoteSortOrder = "newest") {
   const { data, error } = await supabase
     .from("notes")
     .select("*")
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: sortOrder === "oldest" });
 
   return { data: data as Note[] | null, error };
 }
@@ -39,6 +41,10 @@ export async function createNote(note: NoteInsert = {}) {
     .single();
 
   return { data: data as Note | null, error };
+}
+
+export async function toggleNoteFavorite(id: string, isFavorite: boolean) {
+  return updateNote(id, { is_favorite: isFavorite });
 }
 
 export async function updateNote(id: string, updates: NoteUpdate) {
