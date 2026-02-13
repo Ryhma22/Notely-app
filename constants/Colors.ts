@@ -1,5 +1,11 @@
 import { Platform } from "react-native";
 
+// Brändiväri – käytetään auth-sivuilla ja accent-elementeissä
+export const BRAND_TINT = "#0a7ea4";
+
+// Varoitus- ja poisto-toiminnot
+export const DANGER_COLOR = "#D32F2F";
+
 export const Colors = {
   light: {
     text: "#11181C",

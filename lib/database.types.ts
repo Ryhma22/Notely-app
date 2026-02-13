@@ -14,6 +14,7 @@ export interface Note {
   user_id: string;
   title: string;
   content: string;
+  is_favorite?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -23,11 +24,13 @@ export interface NoteInsert {
   user_id?: string;
   title?: string;
   content?: string;
+  is_favorite?: boolean;
 }
 
 export interface NoteUpdate {
   title?: string;
   content?: string;
+  is_favorite?: boolean;
 }
 
 // Note Blocks
