@@ -1,29 +1,35 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { Link, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { signIn } from '@/services/auth';
+} from "react-native";
+import { Link, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { signIn } from "@/services/auth";
+import { useSettings } from "@/hooks/use-settings";
+import { useI18n } from "@/hooks/use-i18n";
+import { Colors } from "@/constants/Colors";
 
 export default function SignInScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { isDark } = useSettings();
+  const { t } = useI18n();
+  const colors = isDark ? Colors.dark : Colors.light;
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Virhe', 'Täytä kaikki kentät');
+      Alert.alert(t("error"), t("fillAllFields"));
       return;
     }
 
@@ -32,39 +38,37 @@ export default function SignInScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Kirjautuminen epäonnistui', error.message);
+      Alert.alert(t("signInFailed"), error.message);
     } else {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <Text style={styles.logo}>Notely</Text>
+        <Text style={[styles.logo, { color: colors.icon }]}>Notely</Text>
 
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Sign In</Text>
-          <Text style={styles.subtitle}>Hi there! Nice to see you again.</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t("signIn")}</Text>
+          <Text style={[styles.subtitle, { color: colors.icon }]}>
+            {t("signInSubtitle")}
+          </Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
-          {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: colors.tint }]}>{t("email")}</Text>
             <TextInput
-              style={styles.input}
-              placeholder="example@email.com"
-              placeholderTextColor="#A0AEC0"
+              style={[styles.input, { color: colors.text, borderBottomColor: colors.icon + "50" }]}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor={colors.icon}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -73,14 +77,13 @@ export default function SignInScreen() {
             />
           </View>
 
-          {/* Password */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text style={[styles.label, { color: colors.tint }]}>{t("password")}</Text>
+            <View style={[styles.passwordContainer, { borderBottomColor: colors.icon + "50" }]}>
               <TextInput
-                style={styles.passwordInput}
-                placeholder="••••••••"
-                placeholderTextColor="#A0AEC0"
+                style={[styles.passwordInput, { color: colors.text }]}
+                placeholder={t("passwordPlaceholder")}
+                placeholderTextColor={colors.icon}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -91,37 +94,41 @@ export default function SignInScreen() {
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={22}
-                  color="#718096"
+                  color={colors.icon}
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Sign In Button */}
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: colors.tint }, loading && styles.buttonDisabled]}
             onPress={handleSignIn}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text style={styles.buttonText}>Sign in</Text>
+              <Text style={[styles.buttonText, { color: colors.background }]}>
+                {t("signIn")}
+              </Text>
             )}
           </TouchableOpacity>
 
-          {/* Links */}
           <View style={styles.linksContainer}>
             <Link href="/(auth)/forgot-password" asChild>
               <TouchableOpacity>
-                <Text style={styles.forgotText}>Forgot Password?</Text>
+                <Text style={[styles.forgotText, { color: colors.icon }]}>
+                  {t("forgotPassword")}
+                </Text>
               </TouchableOpacity>
             </Link>
             <Link href="/(auth)/sign-up" asChild>
               <TouchableOpacity>
-                <Text style={styles.signUpText}>Sign Up</Text>
+                <Text style={[styles.signUpText, { color: colors.tint }]}>
+                  {t("signUp")}
+                </Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -131,11 +138,8 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+const styles = {
+  container: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -143,85 +147,53 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 28,
-    fontWeight: '600',
-    color: '#718096',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     marginBottom: 40,
   },
-  header: {
-    marginBottom: 32,
-  },
+  header: { marginBottom: 32 },
   title: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#2D3748',
+    fontWeight: "700",
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#718096',
-  },
-  form: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
+  subtitle: { fontSize: 16 },
+  form: { flex: 1 },
+  inputGroup: { marginBottom: 20 },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#F25C5C',
+    fontWeight: "600",
     marginBottom: 8,
   },
   input: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
     paddingVertical: 12,
     fontSize: 16,
-    color: '#2D3748',
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   passwordInput: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#2D3748',
   },
-  eyeButton: {
-    padding: 8,
-  },
+  eyeButton: { padding: 8 },
   button: {
-    backgroundColor: '#F25C5C',
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 24,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { fontSize: 16, fontWeight: "600" },
   linksContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 24,
   },
-  forgotText: {
-    fontSize: 14,
-    color: '#718096',
-  },
-  signUpText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#F25C5C',
-  },
-});
+  forgotText: { fontSize: 14 },
+  signUpText: { fontSize: 14, fontWeight: "600" },
+};

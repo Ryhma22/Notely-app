@@ -1,12 +1,17 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
+import { useSettings } from "@/hooks/use-settings";
+import { Colors } from "@/constants/Colors";
 
 export default function AuthLayout() {
+  const { isDark } = useSettings();
+  const bg = isDark ? Colors.dark.background : Colors.light.background;
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#FFFFFF' },
-        animation: 'slide_from_right',
+        contentStyle: { backgroundColor: bg },
+        animation: "slide_from_right",
       }}
     >
       <Stack.Screen name="sign-in" />
