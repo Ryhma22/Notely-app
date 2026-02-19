@@ -54,6 +54,7 @@ export default function NotesScreen() {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<NoteSortOrder>("newest");
+  const [fromCache, setFromCache] = useState(false);
 
   const activeNote = notes.find((n) => n.id === activeNoteId);
 
@@ -138,7 +139,8 @@ export default function NotesScreen() {
 
   const loadNotes = async () => {
     setLoading(true);
-    const { data, error } = await getNotes(sortOrder);
+    const { data, error, fromCache: cached } = await getNotes(sortOrder);
+    setFromCache(cached ?? false);
     if (error) {
       Alert.alert(t("error"), t("notesLoadFailed"));
     } else {
@@ -285,6 +287,25 @@ export default function NotesScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
+        {fromCache && (
+          <View
+            style={{
+              backgroundColor: colors.icon + "25",
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 10,
+              marginBottom: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.text} />
+            <TextApp style={{ flex: 1, fontSize: 14, color: colors.text }}>
+              {t("offlineCachedNotes")}
+            </TextApp>
+          </View>
+        )}
         {/* Haku */}
         <TextInput
           value={searchQuery}

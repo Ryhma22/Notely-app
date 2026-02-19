@@ -1,17 +1,37 @@
 import { supabase } from "@/lib/supabase";
 import type { Note, NoteInsert, NoteUpdate, NoteBlock, NoteBlockInsert, NoteBlockUpdate } from "@/lib/database.types";
+import { saveNotesToCache, getNotesFromCache } from "@/utils/notesCache";
 
 // ============ NOTES ============
 
 export type NoteSortOrder = "newest" | "oldest";
 
-export async function getNotes(sortOrder: NoteSortOrder = "newest") {
+export type GetNotesResult = {
+  data: Note[] | null;
+  error: { message: string } | null;
+  fromCache?: boolean;
+};
+
+export async function getNotes(sortOrder: NoteSortOrder = "newest"): Promise<GetNotesResult> {
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from("notes")
     .select("*")
     .order("updated_at", { ascending: sortOrder === "oldest" });
 
-  return { data: data as Note[] | null, error };
+  if (!error && data) {
+    await saveNotesToCache(data as Note[], sortOrder);
+  }
+
+  if (error && user) {
+    const cached = await getNotesFromCache(user.id, sortOrder);
+    if (cached) {
+      return { data: cached, error: null, fromCache: true };
+    }
+  }
+
+  return { data: data as Note[] | null, error, fromCache: false };
 }
 
 export async function getNote(id: string) {
